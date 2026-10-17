@@ -747,8 +747,8 @@ pub fn sync_window_title(app: &mut PhotocraftApp, ctx: &egui::Context) {
     let mut want = window_title(app);
     if cfg!(target_arch = "wasm32") {
         // Temporary: what the layout is actually given, in points.
-        let r = ctx.input(|i| i.screen_rect());
-        want = format!("{want} [{}x{} ppp{:.2} ph{}]", r.width(), r.height(), ctx.pixels_per_point(), phone(ctx) as u8);
+        let s = screen(ctx);
+        want = format!("{want} [{}x{} ppp{:.2} ph{}]", s.x, s.y, ctx.pixels_per_point(), phone(ctx) as u8);
     }
     if app.last_window_title != want {
         app.last_window_title = want.clone();
