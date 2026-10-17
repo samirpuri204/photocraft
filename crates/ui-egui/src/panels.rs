@@ -164,7 +164,14 @@ pub fn toolbar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
                                     if slot.len() > 1 {
                                         paint_toolbar_flyout_indicator(ui, &t, &resp);
                                     }
-                                    if resp.clicked() && ui.data(|d| d.get_temp::<egui::Id>(held_id)) != Some(key) {
+                                    // A finger has no right button, and a press held over the button hides
+                                    // the flyout under the hand. A tap that arrives as a touch event on a
+                                    // slot holding several tools therefore opens the flyout instead of
+                                    // selecting, so every tool in the group is one tap away.
+                                    let touch_tap = slot.len() > 1
+                                        && resp.clicked()
+                                        && ui.input(|i| i.events.iter().any(|e| matches!(e, egui::Event::Touch { .. })));
+                                    if resp.clicked() && !touch_tap && ui.data(|d| d.get_temp::<egui::Id>(held_id)) != Some(key) {
                                         crate::tool_memory::select(app, tool);
                                     }
                                     // Double-clicking the Hand tool fits the image on screen (Photoshop).
@@ -194,7 +201,7 @@ pub fn toolbar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
                                         && (resp.secondary_clicked() || (resp.clicked() && ui.data(|d| d.get_temp::<egui::Id>(held_id)) != Some(key)));
                                     if reclicked {
                                         ui.data_mut(|d| d.remove::<(egui::Id, Rect)>(flyout_id));
-                                    } else if slot.len() > 1 && (resp.secondary_clicked() || long_press) {
+                                    } else if slot.len() > 1 && (resp.secondary_clicked() || long_press || touch_tap) {
                                         ui.data_mut(|d| {
                                             d.insert_temp(flyout_id, (key, resp.rect));
                                             if long_press {
@@ -911,16 +918,23 @@ fn options_bar_height(pro: bool, narrow: bool) -> f32 {
 pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     let narrow = app.session.prefs().workspace.narrow_options_bar();
+    // A phone-width window has no room for one long row of options: under 700 points they wrap
+    // into as many rows as they need, and the bar shows two of them while the rest scrolls. Wider
+    // windows keep the single row, scrolled sideways.
+    let compact = ui.ctx().content_rect().width() < 700.0;
+    let height = if compact {
+        options_bar_height(t.pro, narrow) * 2.0 - 6.0
+    } else {
+        options_bar_height(t.pro, narrow)
+    };
     egui::Panel::top("options_bar")
-        .exact_size(options_bar_height(t.pro, narrow))
+        .exact_size(height)
         .frame(egui::Frame::NONE.fill(t.chrome).inner_margin(egui::Margin::symmetric(10, 0)))
         .show(ui, |ui| {
             ui.style_mut().spacing.scroll = egui::style::ScrollStyle { bar_width: 4.0, ..egui::style::ScrollStyle::floating() };
-            egui::ScrollArea::horizontal().id_salt("tool-options").auto_shrink([false, false]).show(ui, |ui| {
             // Font ink can extend beyond its advance width at fractional positions.
             // Include its gutter in the container layout, including right-aligned actions.
-            egui::Frame::NONE.inner_margin(egui::Margin { right: 2, ..Default::default() }).show(ui, |ui| {
-            crate::direction::horizontal_centered(ui, |ui| {
+            let options = |ui: &mut egui::Ui| {
                 if t.pro {
                     crate::chrome_ui::home_button(app, ui);
                     widgets::vline(ui, 22.0);
@@ -1510,10 +1524,20 @@ pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
                     crate::symmetry_ui::menu(app, ui);
                 }
                 crate::brush_panel::commit_gesture(app, ui.ctx(), &brush_before, &brush);
-            });
+            };
+            if compact {
+                egui::ScrollArea::vertical().id_salt("tool-options-compact").auto_shrink([false, false]).show(ui, |ui| {
+                    ui.spacing_mut().item_spacing.y = 4.0;
+                    ui.horizontal_wrapped(options);
+                });
+            } else {
+                egui::ScrollArea::horizontal().id_salt("tool-options").auto_shrink([false, false]).show(ui, |ui| {
+                    egui::Frame::NONE.inner_margin(egui::Margin { right: 2, ..Default::default() }).show(ui, |ui| {
+                        crate::direction::horizontal_centered(ui, options);
+                    });
+                });
+            }
             reveal_focused_control(ui);
-            });
-            });
         });
 }
 

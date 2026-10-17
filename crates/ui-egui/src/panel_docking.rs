@@ -444,7 +444,52 @@ pub(crate) fn show(app: &mut PhotocraftApp, ui: &mut egui::Ui) -> bool {
             &mut PanelContent { app, collapsed: &collapsed, commands: &mut commands, targets: &mut targets },
         )
     };
-    let output = if layout.root.is_some() {
+    // A phone has no room for a dock column beside the canvas, so the dock becomes an overlay
+    // that opens over it from a button at the canvas corner, and is folded away otherwise.
+    let phone = ui.ctx().content_rect().width() < 700.0;
+    let overlay_id = egui::Id::new("pixelune-dock-overlay-open");
+    let mut overlay_open = phone && ui.ctx().data(|data| data.get_temp::<bool>(overlay_id)).unwrap_or(false);
+    if phone {
+        let screen = ui.ctx().content_rect();
+        let mut toggled = false;
+        egui::Area::new(egui::Id::new("pixelune-dock-overlay-toggle"))
+            .order(egui::Order::Foreground)
+            .fixed_pos(egui::pos2(screen.right() - 52.0, screen.bottom() - 108.0))
+            .show(ui.ctx(), |ui| {
+                if crate::icons::button(ui, "layers", 36.0, overlay_open, tl!("Panels")).clicked() {
+                    toggled = true;
+                }
+            });
+        if toggled {
+            overlay_open = !overlay_open;
+            ui.ctx().data_mut(|data| data.insert_temp(overlay_id, overlay_open));
+        }
+    }
+    let output = if layout.root.is_none() {
+        Some(draw(ui))
+    } else if phone {
+        if overlay_open {
+            let screen = ui.ctx().content_rect();
+            let width = (screen.width() * 0.9).clamp(240.0, 460.0);
+            Some(
+                egui::Area::new(egui::Id::new("shared-panel-dock-overlay"))
+                    .order(egui::Order::Foreground)
+                    .fixed_pos(egui::pos2(screen.right() - width - 6.0, screen.top() + 6.0))
+                    .show(ui.ctx(), |ui| {
+                        ui.set_width(width);
+                        ui.set_height((screen.height() - 12.0).max(160.0));
+                        egui::Frame::NONE
+                            .fill(t.card)
+                            .stroke(egui::Stroke::new(1.0, t.card_border))
+                            .show(ui, |ui| draw(ui))
+                            .inner
+                    })
+                    .inner,
+            )
+        } else {
+            None
+        }
+    } else {
         // Narrow viewports give the canvas room by shrinking the dock. Only
         // the dock's own width range changes here.
         let screen_w = ui.ctx().content_rect().width();
@@ -470,11 +515,10 @@ pub(crate) fn show(app: &mut PhotocraftApp, ui: &mut egui::Ui) -> bool {
         if let Some(width) = requested_width {
             panel = panel.exact_size(width);
         }
-        panel.show(ui, &mut draw).inner
-    } else {
-        draw(ui)
-    };
-    if let Some(error) = output.error {
+         Some(panel.show(ui, &mut draw).inner)
+     };
+     if let Some(output) = output {
+     if let Some(error) = output.error {
         app.ui.status = error.to_string();
     }
     if ui.input(|input| input.pointer.any_released()) {
@@ -508,6 +552,7 @@ pub(crate) fn show(app: &mut PhotocraftApp, ui: &mut egui::Ui) -> bool {
         if let Err(error) = app.run(id, params) {
             app.ui.status = error;
         }
+    }
     }
     crate::dock::persist(app, ui.ctx());
     true

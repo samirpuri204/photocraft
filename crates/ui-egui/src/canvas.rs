@@ -3255,7 +3255,11 @@ pub fn canvas_view(app: &mut PhotocraftApp, ui: &mut egui::Ui, idx: usize, rect:
     // The wheel also scrolls over the scrollbars drawn on top of the canvas (last frame's hover).
     let bars_id = egui::Id::new(("pc-canvas-bars-hover", idx));
     let over_bars = ctx.data(|d| d.get_temp::<bool>(bars_id)).unwrap_or(false);
-    let nav_hovered = response.hovered() || free_hover || over_bars;
+    // Touch navigation: a two-finger gesture over the canvas pans it, and its pinch zooms about
+    // the fingers. A finger has no hover, so the gesture itself is what focuses navigation here,
+    // and the gesture's centre replaces the pointer as the zoom anchor.
+    let touch = ui.input(|i| i.multi_touch()).filter(|m| m.num_touches >= 2 && rect.contains(m.center_pos));
+    let nav_hovered = response.hovered() || free_hover || over_bars || touch.is_some();
     // Interface › Enable Animations off: the wheel moves the canvas without a glide (#5721).
     let wheel = crate::wheel_nav::read_with(
         &ctx,
@@ -3266,7 +3270,7 @@ pub fn canvas_view(app: &mut PhotocraftApp, ui: &mut egui::Ui, idx: usize, rect:
         app.session.prefs().interface.enable_animations,
     );
     if nav_hovered {
-        let pointer = ui.input(|i| i.pointer.hover_pos());
+        let pointer = ui.input(|i| i.pointer.hover_pos()).or(touch.map(|m| m.center_pos));
         match (wheel, pointer) {
             (Some(crate::wheel_nav::Wheel::Zoom(f)), Some(p)) => {
                 // At a limit the view stays put, as in Photoshop: a notch past 12800 % neither
@@ -3294,6 +3298,15 @@ pub fn canvas_view(app: &mut PhotocraftApp, ui: &mut egui::Ui, idx: usize, rect:
                 view.center[1] -= d.y;
             }
             _ => {}
+        }
+        // Two fingers dragging move the image with them (#mobile). The pinch's zoom is applied by
+        // the wheel path above: egui folds multi-touch into `zoom_delta`.
+        if let Some(m) = touch
+            && m.translation_delta != egui::Vec2::ZERO
+        {
+            let d = xf.unmap_vec(m.translation_delta) / (view.zoom / ppp);
+            view.center[0] -= d.x;
+            view.center[1] -= d.y;
         }
         let rotate_trackpad = app.session.prefs().enhanced_controls.rotate_view_with_trackpad;
         if let Some(delta) = crate::rotate_view::trackpad_delta(&ctx, rotate_trackpad) {
