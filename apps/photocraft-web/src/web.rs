@@ -97,17 +97,13 @@ pub fn start() {
                         .and_then(|w| w.inner_width().ok())
                         .and_then(|v| v.as_f64())
                         .unwrap_or(1280.0);
-                    let compact = css_width < 900.0;
-                    cc.egui_ctx.style_mut(|style| {
-                        if compact {
-                            style.spacing.interact_size.y =
-                                style.spacing.interact_size.y.max(34.0);
-                            style.spacing.button_padding = eframe::egui::vec2(9.0, 6.0);
-                            style.spacing.item_spacing = eframe::egui::vec2(6.0, 6.0);
-                            style.spacing.scroll.bar_width =
-                                style.spacing.scroll.bar_width.max(10.0);
-                        }
-                    });
+                    if css_width < 900.0 {
+                        let mut style = (*cc.egui_ctx.style()).clone();
+                        style.spacing.interact_size.y = style.spacing.interact_size.y.max(34.0);
+                        style.spacing.button_padding = eframe::egui::vec2(9.0, 6.0);
+                        style.spacing.item_spacing = eframe::egui::vec2(6.0, 6.0);
+                        cc.egui_ctx.set_style(style);
+                    }
                     if let Some(rs) = cc.wgpu_render_state.clone()
                         && !force_cpu
                     {
