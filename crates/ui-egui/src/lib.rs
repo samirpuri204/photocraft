@@ -551,6 +551,8 @@ pub struct PhotocraftApp {
     /// This frame's window is a phone: narrow, or a phone held sideways. Set once per frame before
     /// any panel draws and read by every layout decision, so all of them agree. Never saved.
     pub phone: bool,
+    /// The phone's all-tools sheet is open (never saved).
+    pub phone_tools_open: bool,
     pub services: Services,
     /// Canvas caches per (document, display): CPU textures hold monitor values; the GPU
     /// canvas state is shared (`canvas::GPU_OUTPUT`).
@@ -838,6 +840,7 @@ impl PhotocraftApp {
             session,
             ui: UiState::default(),
             phone: false,
+            phone_tools_open: false,
             services,
             canvases: HashMap::new(),
             navigator_textures: HashMap::new(),
@@ -2032,11 +2035,16 @@ impl eframe::App for PhotocraftApp {
         if chrome && self.ui.panels.status_bar && ui.max_rect().width() >= 700.0 {
             panels::status_bar(self, ui);
         }
-        if chrome && self.ui.panels.toolbar {
+        // A phone trades the tool column for canvas width; the same tools live in the bottom bar
+        // and its all-tools sheet.
+        if chrome && self.ui.panels.toolbar && !self.phone {
             panels::toolbar(self, ui);
         }
         if chrome && self.ui.panels.dock {
             panels::right_dock(self, ui);
+        }
+        if chrome && self.phone {
+            panels::mobile_tools(self, ui);
         }
         let t = theme::Tokens::get(&ctx);
         let backdrop = if chrome { prefs_ui::pasteboard_color(self).unwrap_or(t.canvas) } else { egui::Color32::BLACK };
