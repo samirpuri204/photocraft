@@ -89,21 +89,6 @@ pub fn start() {
                     }
                     listen_pen(&pen_target, app.stylus.feed.clone());
                     app.set_theme(&cc.egui_ctx, ThemeKind::Pro);
-                    // Touch-friendly metrics on narrow viewports. This changes
-                    // control sizes and spacing only; layout geometry and
-                    // pointer mapping are untouched, so canvas coordinates stay
-                    // exact.
-                    let css_width = web_sys::window()
-                        .and_then(|w| w.inner_width().ok())
-                        .and_then(|v| v.as_f64())
-                        .unwrap_or(1280.0);
-                    if css_width < 900.0 {
-                        let mut style = (*cc.egui_ctx.style()).clone();
-                        style.spacing.interact_size.y = style.spacing.interact_size.y.max(34.0);
-                        style.spacing.button_padding = eframe::egui::vec2(9.0, 6.0);
-                        style.spacing.item_spacing = eframe::egui::vec2(6.0, 6.0);
-                        cc.egui_ctx.set_style(style);
-                    }
                     if let Some(rs) = cc.wgpu_render_state.clone()
                         && !force_cpu
                     {
