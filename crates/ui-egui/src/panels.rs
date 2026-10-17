@@ -744,12 +744,7 @@ pub fn window_title(app: &PhotocraftApp) -> String {
 /// Keep the OS window title (and the taskbar / Alt-Tab entry) on the active file. Sends
 /// `ViewportCommand::Title` only when the title changed since the last frame.
 pub fn sync_window_title(app: &mut PhotocraftApp, ctx: &egui::Context) {
-    let mut want = window_title(app);
-    if cfg!(target_arch = "wasm32") {
-        // Temporary: what the layout is actually given, in points.
-        let s = screen(ctx);
-        want = format!("{want} [{}x{} ppp{:.2} ph{}]", s.x, s.y, ctx.pixels_per_point(), phone(ctx) as u8);
-    }
+    let want = window_title(app);
     if app.last_window_title != want {
         app.last_window_title = want.clone();
         ctx.send_viewport_cmd(egui::ViewportCommand::Title(want));

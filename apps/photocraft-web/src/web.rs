@@ -282,6 +282,31 @@ impl WebShell {
     }
 }
 
+/// egui must lay out in CSS pixels, or every control is drawn at the device-ratio scale and a
+/// phone gets a 780-point canvas instead of 390: half-size chrome, taps that miss, and dialogs
+/// wider than the screen. eframe samples the device ratio once at startup, so an emulated
+/// viewport, a browser zoom and an orientation change can all leave it stale. The canvas itself
+/// always knows: its backing store is CSS pixels times the device ratio.
+fn sync_pixels_per_point(ctx: &egui::Context) {
+    let Some(canvas) = web_sys::window()
+        .and_then(|w| w.document())
+        .and_then(|d| d.get_element_by_id(CANVAS_ID))
+        .and_then(|e| e.dyn_into::<web_sys::HtmlCanvasElement>().ok())
+    else {
+        return;
+    };
+    let css = canvas.client_width() as f32;
+    let device = canvas.width() as f32;
+    if css <= 0.0 || device <= 0.0 {
+        return;
+    }
+    let ratio = (device / css).clamp(0.5, 4.0);
+    if (ctx.pixels_per_point() - ratio).abs() > 0.01 {
+        ctx.set_pixels_per_point(ratio);
+        ctx.request_repaint();
+    }
+}
+
 impl eframe::App for WebShell {
     fn logic(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         let dropped = ctx.input_mut(|i| std::mem::take(&mut i.raw.dropped_files));
@@ -305,6 +330,7 @@ impl eframe::App for WebShell {
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
+        sync_pixels_per_point(ui.ctx());
         // Only while a preset change is unsaved. Storage the browser denies from the start (a
         // sandboxed iframe, blocked site data) loses nothing until the first change, and that
         // change brings the banner with the reason.
