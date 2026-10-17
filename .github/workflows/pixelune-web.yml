@@ -50,6 +50,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: pixelune-web
-          path: dist/photocraft-web-*.zip
+          path: dist/release/photocraft-web-*.zip
           if-no-files-found: error
           retention-days: 14
