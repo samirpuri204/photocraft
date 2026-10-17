@@ -233,12 +233,12 @@ mod boot {
                     Ok(()) => return,
                     Err(e) => e,
                 };
-                web_sys::console::error_2(&JsValue::from_str("photocraft-web-boot: could not start PhotoCraft:"), &error);
+                web_sys::console::error_2(&JsValue::from_str("photocraft-web-boot: could not start Pixelune:"), &error);
                 let Some(&wait) = RETRY_AFTER.get(attempt) else {
-                    say("PhotoCraft couldn't be downloaded. Check your connection, then try again: ", true);
+                    say("Pixelune couldn't be downloaded. Check your connection, then try again: ", true);
                     return;
                 };
-                say("Loading PhotoCraft\u{2026} (the download failed, trying again)", false);
+                say("Loading Pixelune\u{2026} (the download failed, trying again)", false);
                 sleep(wait).await;
                 attempt += 1;
             }

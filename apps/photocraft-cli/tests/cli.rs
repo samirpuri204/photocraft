@@ -725,7 +725,7 @@ fn a_non_unicode_argument_is_a_usage_error_not_a_panic() {
 }
 
 /// `batch --actions set.atn`: a Photoshop Actions file plays like an Actions set, and its steps
-/// PhotoCraft can't play are warned about up front.
+/// Pixelune can't play are warned about up front.
 #[test]
 fn batch_plays_a_photoshop_actions_file() {
     use photocraft_engine::actions_cmds::Action;

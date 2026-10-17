@@ -276,7 +276,7 @@ pub fn intel_dx12_applied(adapters: &[Candidate], chosen: usize, os: Os) -> bool
 
 /// wgpu compiles indirect-call validation shaders inside `request_device`; Metal's compiler
 /// crashes on them on old Intel Macs (Iris Pro, GPUFamily 1 on Monterey), so no mode could start
-/// (#3107). Only Intel Macs skip them: PhotoCraft issues no indirect draws or dispatches, but every
+/// (#3107). Only Intel Macs skip them: Pixelune issues no indirect draws or dispatches, but every
 /// other GPU keeps wgpu's default. `WGPU_VALIDATION_INDIRECT_CALL=1` still wins.
 fn skips_indirect_validation(os: Os, intel: bool) -> bool {
     os == Os::Mac && intel
