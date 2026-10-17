@@ -449,22 +449,6 @@ pub(crate) fn show(app: &mut PhotocraftApp, ui: &mut egui::Ui) -> bool {
     let phone = ui.ctx().content_rect().width() < 700.0;
     let overlay_id = egui::Id::new("pixelune-dock-overlay-open");
     let mut overlay_open = phone && ui.ctx().data(|data| data.get_temp::<bool>(overlay_id)).unwrap_or(false);
-    if phone {
-        let screen = ui.ctx().content_rect();
-        let mut toggled = false;
-        egui::Area::new(egui::Id::new("pixelune-dock-overlay-toggle"))
-            .order(egui::Order::Foreground)
-            .fixed_pos(egui::pos2(screen.right() - 52.0, screen.bottom() - 108.0))
-            .show(ui.ctx(), |ui| {
-                if crate::icons::button(ui, "layers", 36.0, overlay_open, tl!("Panels")).clicked() {
-                    toggled = true;
-                }
-            });
-        if toggled {
-            overlay_open = !overlay_open;
-            ui.ctx().data_mut(|data| data.insert_temp(overlay_id, overlay_open));
-        }
-    }
     let output = if layout.root.is_none() {
         Some(draw(ui))
     } else if phone {
@@ -553,6 +537,23 @@ pub(crate) fn show(app: &mut PhotocraftApp, ui: &mut egui::Ui) -> bool {
             app.ui.status = error;
         }
     }
+    }
+    // The toggle is drawn after the dock so it stays on top of the open overlay and can close it.
+    if phone {
+        let screen = ui.ctx().content_rect();
+        let mut clicked = false;
+        egui::Area::new(egui::Id::new("pixelune-dock-overlay-toggle"))
+            .order(egui::Order::Foreground)
+            .fixed_pos(egui::pos2(screen.right() - 52.0, screen.bottom() - 108.0))
+            .show(ui.ctx(), |ui| {
+                if crate::icons::button(ui, "layers", 36.0, overlay_open, tl!("Panels")).clicked() {
+                    clicked = true;
+                }
+            });
+        if clicked {
+            // Takes effect next frame: this frame's dock has already been laid out.
+            ui.ctx().data_mut(|data| data.insert_temp(overlay_id, !overlay_open));
+        }
     }
     crate::dock::persist(app, ui.ctx());
     true
