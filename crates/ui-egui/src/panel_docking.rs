@@ -445,9 +445,26 @@ pub(crate) fn show(app: &mut PhotocraftApp, ui: &mut egui::Ui) -> bool {
         )
     };
     let output = if layout.root.is_some() {
+        // Narrow viewports give the canvas room by shrinking the dock. Only
+        // the dock's own width range changes here.
+        let screen_w = ui.ctx().content_rect().width();
+        let dock_default = if screen_w < 700.0 {
+            (screen_w * 0.52).clamp(180.0, 260.0)
+        } else if t.pro {
+            290.0
+        } else {
+            300.0
+        };
+        let dock_max: f32 = if screen_w < 700.0 {
+            300.0
+        } else if screen_w < 1100.0 {
+            300.0
+        } else {
+            f32::INFINITY
+        };
         let mut panel = egui::Panel::right("shared-panel-dock")
-            .default_size(if t.pro { 290.0 } else { 300.0 })
-            .size_range(crate::panels::DOCK_WIDTH)
+            .default_size(dock_default)
+            .size_range(180.0..=dock_max)
             .resizable(!locked)
             .frame(egui::Frame::NONE.fill(t.card));
         if let Some(width) = requested_width {
