@@ -445,9 +445,27 @@ pub(crate) fn show(app: &mut PhotocraftApp, ui: &mut egui::Ui) -> bool {
         )
     };
     let output = if layout.root.is_some() {
+        // Keep the dock from eating the canvas on narrow viewports. Only the
+        // panel's own width range changes; nothing inside it is repositioned.
+        let screen_w = ui.ctx().screen_rect().width();
+        let dock_default = if screen_w < 700.0 {
+            (screen_w * 0.5).clamp(180.0, 260.0)
+        } else if t.pro {
+            290.0
+        } else {
+            300.0
+        };
+        let dock_max = if screen_w < 700.0 {
+            (screen_w * 0.6).clamp(220.0, 320.0)
+        } else if screen_w < 1100.0 {
+            280.0
+        } else {
+            360.0
+        };
+        let dock_range = 180.0f32..=dock_max.max(220.0);
         let mut panel = egui::Panel::right("shared-panel-dock")
-            .default_size(if t.pro { 290.0 } else { 300.0 })
-            .size_range(crate::panels::DOCK_WIDTH)
+            .default_size(dock_default)
+            .size_range(dock_range)
             .resizable(!locked)
             .frame(egui::Frame::NONE.fill(t.card));
         if let Some(width) = requested_width {
