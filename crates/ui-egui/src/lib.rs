@@ -1983,6 +1983,19 @@ impl eframe::App for PhotocraftApp {
         panels::set_screen(&ctx, size);
         self.phone = size.x < 700.0 || size.y < 480.0;
         panels::set_phone(&ctx, self.phone);
+        if cfg!(target_arch = "wasm32") {
+            // Temporary readout: what the layout is actually given.
+            egui::Area::new(egui::Id::new("layout-readout"))
+                .fixed_pos(egui::pos2(6.0, 6.0))
+                .order(egui::Order::Tooltip)
+                .show(&ctx, |ui| {
+                    ui.label(
+                        egui::RichText::new(format!("{:.0}x{:.0} p{:.2} ph{}", size.x, size.y, ctx.pixels_per_point(), self.phone as u8))
+                            .color(egui::Color32::from_rgb(255, 80, 80))
+                            .size(13.0),
+                    );
+                });
+        }
         i18n::set_current(i18n::Lang::from_pref(&self.session.prefs().interface.language));
         // Fonts registered via set_fonts only take effect next frame; named families would panic now.
         if !self.fonts_ready {
