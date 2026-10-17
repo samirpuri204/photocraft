@@ -116,12 +116,17 @@ fn show_modal<T>(
     interactive: bool,
     contents: impl FnOnce(&mut egui::Ui) -> T,
 ) -> egui::ModalResponse<T> {
+    // One policy for every dialog on a phone: it never grows past the screen, it always scrolls
+    // inside it, and it does not offer a desktop resize grip. Without this each dialog had its own
+    // width assumption and its footer could end up off the visible area.
+    let phone = crate::panels::phone(ctx);
+    let room = crate::panels::screen(ctx) - egui::vec2(24.0, 80.0);
     modal.show(ctx, |ui| {
         // Disable the entire older modal, including its resize grip, not just its body.
         if !interactive {
             ui.disable();
         }
-        if resizable {
+        if resizable && !phone {
             let max = (ctx.content_rect().size() - egui::vec2(40.0, 40.0)).max(egui::vec2(560.0, 400.0));
             egui::Resize::default()
                 .id(id.with("resize"))
@@ -129,6 +134,14 @@ fn show_modal<T>(
                 .min_size(egui::vec2(560.0, 400.0))
                 .max_size(max)
                 .show(ui, contents)
+        } else if phone {
+            ui.set_max_width(room.x.max(240.0));
+            egui::ScrollArea::vertical()
+                .id_salt(("dialog-phone-scroll", id))
+                .max_height(room.y.max(200.0))
+                .auto_shrink([false, false])
+                .show(ui, contents)
+                .inner
         } else {
             contents(ui)
         }
@@ -233,7 +246,7 @@ pub fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
             // The About window: room for the contributor table, the same width on every tab.
             let about_tabs = d.kind == DialogKind::About && d.fields.get("systemInfo").and_then(Value::as_bool) != Some(true);
             if about_tabs {
-                ui.set_min_width(700.0);
+                ui.set_min_width(700.0f32.min(max_w));
             }
             ui.set_max_width(wide.unwrap_or(if d.kind == DialogKind::NewDocument {
                 800.0
@@ -283,20 +296,7 @@ pub fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
             crate::field_tab::begin(ui.ctx());
             match d.kind {
                 DialogKind::NewDocument => {
-                    // On a phone the sheet is taller than the screen: scroll it, so the footer
-                    // with Create stays reachable.
-                    let created = if phone {
-                        let room = (crate::panels::screen(ui.ctx()).y - 220.0).max(200.0);
-                        egui::ScrollArea::vertical()
-                            .id_salt("new-document-phone")
-                            .max_height(room)
-                            .auto_shrink([false, false])
-                            .show(ui, |ui| crate::new_doc_ui::body(app, ui, &mut fields))
-                            .inner
-                    } else {
-                        crate::new_doc_ui::body(app, ui, &mut fields)
-                    };
-                    if created {
+                    if crate::new_doc_ui::body(app, ui, &mut fields) {
                         outcome = Some(true);
                     }
                 }
