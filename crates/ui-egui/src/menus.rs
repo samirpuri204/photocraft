@@ -1303,11 +1303,18 @@ fn title_press(ctx: &egui::Context, title: &egui::Response) -> Option<egui::SetO
     // A press this frame on the title (still down, or a whole click within one frame), or a
     // finger touching it.
     let pressed = (ctx.input(|i| i.pointer.primary_pressed()) && (title.is_pointer_button_down_on() || title.clicked()))
-        || touch_started_on(ctx, title.rect);
+        || touch_started_on(ctx, title.rect)
+        // A touch tap can reach the widget as a click alone, with no press frame of its own.
+        || title.clicked();
     if !pressed {
         return None;
     }
     let open = egui::Popup::is_id_open(ctx, egui::Popup::default_response_id(title));
+    // The click that ends the gesture that opened the menu must not toggle it shut again.
+    let now = ctx.input(|i| i.time);
+    if open && ctx.data(|d| d.get_temp::<f64>(menu_open_at_id())).is_some_and(|t| now - t < 0.35) {
+        return None;
+    }
     if !open {
         ctx.data_mut(|d| d.insert_temp(press_gesture_id(), true));
     }
