@@ -1245,19 +1245,13 @@ pub fn menu_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) -> f32 {
             keys.keys(ui.ctx(), &tops, &mnemonics, &mut nav, &mut clicked);
         });
         };
-        // A phone cannot show ten menu titles at once; the bar scrolls sideways there, so Window
-        // and Help stay reachable instead of being cut off at the edge.
-        // Measured here, not from the frame flag: the bar is drawn before the flag settles.
-        let narrow = ui.available_width() < 700.0;
-        if narrow {
+        // A phone cannot show ten titles at once. They are tightened rather than put in a
+        // horizontal scroller: a ScrollArea over the bar swallowed the presses, so no menu opened
+        // at all, which is far worse than a clipped "Help".
+        if ui.available_width() < 700.0 {
             ui.spacing_mut().button_padding.x = 5.0;
-            egui::ScrollArea::horizontal()
-                .id_salt("pixelune-menu-bar")
-                .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysHidden)
-                .show(ui, &mut bar);
-        } else {
-            bar(ui);
         }
+        bar(ui);
     });
     keys.store(ui.ctx());
     nav.store(ui.ctx());

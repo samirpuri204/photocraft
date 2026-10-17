@@ -267,9 +267,13 @@ pub fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
                 440.0
             };
             ui.set_max_width(cap.min(max_w));
-            if web {
+            // The web build stretches dialogs to the window; on a phone that available size is
+            // the whole screen and would fight the cap above, so the cap wins there.
+            if web && !phone {
                 ui.set_max_width(available.x);
                 ui.set_min_size(available);
+            } else if phone {
+                ui.set_max_width(ui.max_rect().width().min(max_w));
             } else if let Some(w) = crate::file_ui::dialog_width(&d.fields) {
                 ui.set_min_width(w);
                 ui.set_max_width(w);
