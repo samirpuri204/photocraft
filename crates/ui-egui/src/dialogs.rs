@@ -304,6 +304,23 @@ pub fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
             crate::widgets::hairline(ui);
             ui.add_space(8.0);
             crate::field_tab::begin(ui.ctx());
+            // On a phone the sheet is taller than the window, so the Create button at its foot
+            // would need scrolling. The phone draws the actions at the top instead, where they
+            // are always on screen.
+            if phone && d.kind == DialogKind::NewDocument && interactive {
+                ui.add_space(2.0);
+                ui.horizontal(|ui| {
+                    let can = crate::crop_presets::can_confirm(app, &fields) && crate::stack_dialog::can_confirm(&fields);
+                    if crate::widgets::primary_button(ui, tl!("Create"), 96.0).clicked() && can {
+                        outcome = Some(true);
+                    }
+                    ui.add_space(6.0);
+                    if crate::widgets::secondary_button(ui, tl!("Close"), 96.0).clicked() {
+                        outcome = Some(false);
+                    }
+                });
+                ui.add_space(2.0);
+            }
             match d.kind {
                 DialogKind::NewDocument => {
                     if crate::new_doc_ui::body(app, ui, &mut fields) {
