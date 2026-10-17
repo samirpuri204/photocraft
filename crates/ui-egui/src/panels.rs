@@ -744,7 +744,12 @@ pub fn window_title(app: &PhotocraftApp) -> String {
 /// Keep the OS window title (and the taskbar / Alt-Tab entry) on the active file. Sends
 /// `ViewportCommand::Title` only when the title changed since the last frame.
 pub fn sync_window_title(app: &mut PhotocraftApp, ctx: &egui::Context) {
-    let want = window_title(app);
+    let mut want = window_title(app);
+    if cfg!(target_arch = "wasm32") {
+        // Temporary: what the layout is actually given, in points.
+        let r = ctx.input(|i| i.screen_rect());
+        want = format!("{want} [{}x{} ppp{:.2} ph{}]", r.width(), r.height(), ctx.pixels_per_point(), phone(ctx) as u8);
+    }
     if app.last_window_title != want {
         app.last_window_title = want.clone();
         ctx.send_viewport_cmd(egui::ViewportCommand::Title(want));
@@ -913,6 +918,32 @@ fn options_bar_height(pro: bool, narrow: bool) -> f32 {
         (true, true) => 30.0,
         (false, false) => 42.0,
         (false, true) => 34.0,
+    }
+}
+
+#[cfg(test)]
+mod phone_flag_tests {
+    /// The flag must survive from the start of the frame to the panels that read it, and the
+    /// root ui's width must be the window's width in points.
+    #[test]
+    fn the_phone_flag_round_trips_within_a_frame() {
+        let ctx = egui::Context::default();
+        let mut seen = None;
+        let input = egui::RawInput {
+            screen_rect: Some(egui::Rect::from_min_size(egui::pos2(0.0, 0.0), egui::vec2(390.0, 844.0))),
+            ..Default::default()
+        };
+        let mut out = ctx.run_ui(input, |ui| {
+            let size = ui.max_rect().size();
+            super::set_screen(&ctx, size);
+            super::set_phone(&ctx, size.x < 700.0 || size.y < 480.0);
+            seen = Some((size, super::phone(&ctx), super::screen(&ctx)));
+        });
+        out.textures_delta.clear();
+        let (size, phone, screen) = seen.expect("a frame ran");
+        println!("size={size:?} phone={phone} screen={screen:?}");
+        assert_eq!(size.x, 390.0);
+        assert!(phone, "390 pt wide is a phone layout");
     }
 }
 
