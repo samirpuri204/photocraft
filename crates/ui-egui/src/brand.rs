@@ -1,52 +1,58 @@
-//! The Pixelune brand mark at the left of the title bar: the app icon (the kitsune,
-//! `assets/app-icon/`, see its README), where Photoshop shows its "Ps" tile. The PNG carries the
-//! icon's rounded corners; it is decoded once per context into a mipmapped texture, so it stays
-//! crisp at the title bar's size on any display scale.
+//! The Pixelune brand mark at the left of the title bar, where Photoshop shows its "Ps" tile.
+//!
+//! The mark is the Septet "7": seven strokes, three across the top and four down the diagonal,
+//! with the middle top stroke in the accent — the same mark the landing page draws, so the
+//! editor and the site read as one product. It is drawn as line segments rather than an image,
+//! so it stays crisp at any display scale and needs no texture.
 
-use egui::{Color32, Context, Id, Rect, TextureHandle, TextureOptions, Ui, pos2};
-use photocraft_codecs::{ChannelLayout, SampleType};
+use egui::{Color32, Rect, Ui, vec2};
 
-/// 128 px: sharp at 20 pt on a 3× display, and the mipmaps keep it clean at 1×.
-const ICON_PNG: &[u8] = include_bytes!("../../../assets/app-icon/hicolor/128x128/apps/ai.storyteller.photocraft.png");
+/// The mark's design box, matching the site's `viewBox="0 0 28 30"`.
+const BOX: (f32, f32) = (28.0, 30.0);
+/// Stroke width in the design box (the site uses 3.2).
+const STROKE: f32 = 3.2;
 
-/// The icon's pixels (one transparent pixel if it couldn't be decoded, which a test rules out).
-fn decode() -> egui::ColorImage {
-    let rgba = photocraft_codecs::decode(ICON_PNG).ok().map(|img| img.convert(ChannelLayout::Rgba, SampleType::U8));
-    match rgba {
-        Some(img) if img.data().len() == img.width() as usize * img.height() as usize * 4 => {
-            egui::ColorImage::from_rgba_unmultiplied([img.width() as usize, img.height() as usize], img.data())
-        }
-        _ => egui::ColorImage::filled([1, 1], Color32::TRANSPARENT),
-    }
-}
-
-/// The icon texture, uploaded on first use and kept in the context.
-fn texture(ctx: &Context) -> TextureHandle {
-    let id = Id::new("photocraft-brand-mark");
-    if let Some(tex) = ctx.data(|d| d.get_temp::<TextureHandle>(id)) {
-        return tex;
-    }
-    let options = TextureOptions { mipmap_mode: Some(egui::TextureFilter::Linear), ..TextureOptions::LINEAR };
-    let tex = ctx.load_texture("photocraft-brand-mark", decode(), options);
-    ctx.data_mut(|d| d.insert_temp(id, tex.clone()));
-    tex
-}
+/// The three top strokes and the four diagonal ones, in design-box coordinates.
+const STROKES: [(f32, f32, f32, f32); 7] = [
+    (3.4, 4.2, 10.4, 4.2),
+    (10.4, 4.2, 17.4, 4.2),
+    (17.4, 4.2, 24.4, 4.2),
+    (24.4, 4.2, 21.1, 10.4),
+    (21.1, 10.4, 18.4, 15.6),
+    (18.4, 15.6, 15.7, 20.8),
+    (15.7, 20.8, 13.0, 26.0),
+];
 
 /// Where the mark was painted this frame (tests and screenshots).
-fn rect_id() -> Id {
-    Id::new("photocraft-brand-mark-rect")
+fn rect_id() -> egui::Id {
+    egui::Id::new("photocraft-brand-mark-rect")
 }
 
-/// Paint the mark into `r` (square).
+/// Paint the mark into `r`, keeping its proportions and centring it.
 pub fn paint_mark(ui: &Ui, r: Rect) {
-    let uv = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
-    ui.painter().image(texture(ui.ctx()).id(), r, uv, Color32::WHITE);
+    let t = crate::theme::Tokens::get(ui.ctx());
+    let scale = (r.width() / BOX.0).min(r.height() / BOX.1);
+    let origin = r.center() - vec2(BOX.0, BOX.1) * scale / 2.0;
+    let at = |x: f32, y: f32| origin + vec2(x, y) * scale;
+    let width = (STROKE * scale).max(1.0);
+    let p = ui.painter();
+    for (i, (x1, y1, x2, y2)) in STROKES.iter().enumerate() {
+        // The site carries the accent on the second top stroke.
+        let color: Color32 = if i == 1 { t.accent } else { t.text };
+        let stroke = egui::Stroke::new(width, color);
+        let (a, b) = (at(*x1, *y1), at(*x2, *y2));
+        p.line_segment([a, b], stroke);
+        // egui's line segments have square ends; a disc at each end gives the site's round caps
+        // so the strokes meet without notches.
+        p.circle_filled(a, width / 2.0, color);
+        p.circle_filled(b, width / 2.0, color);
+    }
     ui.ctx().data_mut(|d| d.insert_temp(rect_id(), r));
 }
 
 /// The rect the mark was last painted into.
 #[cfg(test)]
-pub fn mark_rect(ctx: &Context) -> Option<Rect> {
+pub fn mark_rect(ctx: &egui::Context) -> Option<Rect> {
     ctx.data(|d| d.get_temp(rect_id()))
 }
 
@@ -55,30 +61,24 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_icon_decodes_to_a_rounded_128_px_tile() {
-        let img = decode();
-        assert_eq!(img.size, [128, 128]);
-        // Rounded corners: the corner pixel is transparent, the centre opaque.
-        assert_eq!(img.pixels[0].a(), 0);
-        assert_eq!(img.pixels[64 * 128 + 64].a(), 255);
+    fn the_mark_has_seven_strokes_and_stays_inside_its_rect() {
+        assert_eq!(STROKES.len(), 7);
+        for (x1, y1, x2, y2) in STROKES {
+            assert!((0.0..=BOX.0).contains(&x1) && (0.0..=BOX.0).contains(&x2));
+            assert!((0.0..=BOX.1).contains(&y1) && (0.0..=BOX.1).contains(&y2));
+        }
     }
 
     #[test]
-    fn the_title_bar_paints_the_icon_from_one_cached_texture() {
-        let ctx = Context::default();
+    fn the_title_bar_paints_the_mark() {
+        let ctx = egui::Context::default();
         crate::PhotocraftApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
         let mut app = crate::PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
         // The system title bar hides the in-app mark (the OS draws its own icon), so paint the
         // app-drawn bar here.
         app.custom_titlebar = true;
-        let mut frame = || {
-            let mut out = ctx.run_ui(egui::RawInput::default(), |ui| crate::panels::title_bar(&mut app, ui));
-            let uploads = out.textures_delta.set.values().flat_map(|d| d.iter()).filter(|d| d.image.size() == [128, 128]).count();
-            out.textures_delta.clear();
-            uploads
-        };
-        assert_eq!(frame(), 1, "uploaded on first use");
-        assert_eq!(frame(), 0, "then reused");
-        assert!(mark_rect(&ctx).is_some());
+        let mut out = ctx.run_ui(egui::RawInput::default(), |ui| crate::panels::title_bar(&mut app, ui));
+        out.textures_delta.clear();
+        assert!(mark_rect(&ctx).is_some(), "the brand mark is painted");
     }
 }

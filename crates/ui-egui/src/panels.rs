@@ -83,7 +83,8 @@ pub fn toolbar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     let (w1, bx, m) = if t.pro { (40.0, 30.0, 5i8) } else { (50.0, 36.0, 7i8) };
     let sections = visible_sections(&app.session.prefs().toolbar.hidden);
     // Two columns when the header chevron asks for them; a column that doesn't fit scrolls.
-    let double = app.ui.panels.toolbar_double;
+    // A phone has no width to spare for the second tool column.
+    let double = app.ui.panels.toolbar_double && ui.max_rect().width() >= 700.0;
     let w = if double { w1 + bx + 2.0 } else { w1 };
     crate::direction::start_panel("toolbar")
         .resizable(false)
@@ -921,7 +922,7 @@ pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     // A phone-width window has no room for one long row of options: under 700 points they wrap
     // into as many rows as they need, and the bar shows two of them while the rest scrolls. Wider
     // windows keep the single row, scrolled sideways.
-    let compact = ui.ctx().content_rect().width() < 700.0;
+    let compact = ui.max_rect().width() < 700.0;
     let height = if compact {
         options_bar_height(t.pro, narrow) * 2.0 - 6.0
     } else {

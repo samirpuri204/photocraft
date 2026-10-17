@@ -446,9 +446,9 @@ pub(crate) fn show(app: &mut PhotocraftApp, ui: &mut egui::Ui) -> bool {
     };
     // A phone has no room for a dock column beside the canvas, so the dock becomes an overlay
     // that opens over it from a button at the canvas corner, and is folded away otherwise.
-    let phone = ui.ctx().content_rect().width() < 700.0;
+    let phone = ui.max_rect().width() < 700.0;
     let overlay_id = egui::Id::new("pixelune-dock-overlay-open");
-    let mut overlay_open = phone && ui.ctx().data(|data| data.get_temp::<bool>(overlay_id)).unwrap_or(false);
+    let overlay_open = phone && ui.ctx().data(|data| data.get_temp::<bool>(overlay_id)).unwrap_or(false);
     let output = if layout.root.is_none() {
         Some(draw(ui))
     } else if phone {

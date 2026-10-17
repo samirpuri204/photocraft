@@ -2017,7 +2017,9 @@ impl eframe::App for PhotocraftApp {
         if chrome && self.ui.panels.options_bar {
             panels::options_bar(self, ui);
         }
-        if chrome && self.ui.panels.status_bar {
+        // A phone spends its height on the canvas: the status bar's document and zoom readouts
+        // are the first thing to go.
+        if chrome && self.ui.panels.status_bar && ui.max_rect().width() >= 700.0 {
             panels::status_bar(self, ui);
         }
         if chrome && self.ui.panels.toolbar {
