@@ -19,5 +19,37 @@ jobs:
       CARGO_INCREMENTAL: "0"
 
     steps:
-      - name: Check
-<omitted chars="1043" />
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install Trunk
+        run: |
+          mkdir -p "$HOME/.cargo/bin"
+          curl -fsSL \
+            "https://github.com/trunk-rs/trunk/releases/download/v${TRUNK_VERSION}/trunk-x86_64-unknown-linux-gnu.tar.gz" \
+            | tar -xz -C "$HOME/.cargo/bin" trunk
+          trunk --version
+
+      - name: Check resources
+        run: |
+          free -h
+          df -h
+
+      - name: Build browser package
+        run: bash packaging/web/package.sh
+
+      - name: Upload Pixelune artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pixelune-web
+          path: dist/photocraft-web-*.zip
+          if-no-files-found: error
+          retention-days: 14
