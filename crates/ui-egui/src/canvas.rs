@@ -2760,7 +2760,7 @@ fn start_screen(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     ui.scope_builder(egui::UiBuilder::new().max_rect(card), |ui| {
         ui.vertical_centered(|ui| {
             ui.horizontal(|ui| {
-                let title = ui.painter().layout_no_wrap("Pixora".into(), crate::theme::semibold(38.0), t.text);
+                let title = ui.painter().layout_no_wrap("Pixelune".into(), crate::theme::semibold(38.0), t.text);
                 let by = ui.painter().layout_no_wrap("by Samir Puri".into(), egui::FontId::proportional(13.0), t.text_faint);
                 let total = title.size().x + by.size().x + 10.0;
                 ui.add_space(((card.width() - total) / 2.0).max(0.0));
