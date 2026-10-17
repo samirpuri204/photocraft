@@ -303,6 +303,14 @@ fn sync_pixels_per_point(ctx: &egui::Context) {
     let ratio = (device / css).clamp(0.5, 4.0);
     if (ctx.pixels_per_point() - ratio).abs() > 0.01 {
         ctx.set_pixels_per_point(ratio);
+        // Changing the scale does not re-measure the window by itself: the layout would keep the
+        // old size in the new, larger points and overflow. A resize makes the runner recompute
+        // the size in points, so points and CSS pixels stay equal.
+        if let Some(window) = web_sys::window()
+            && let Ok(event) = web_sys::Event::new("resize")
+        {
+            let _ = window.dispatch_event(&event);
+        }
         ctx.request_repaint();
     }
 }
