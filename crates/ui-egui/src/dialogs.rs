@@ -251,7 +251,9 @@ pub fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
             if about_tabs {
                 ui.set_min_width(700.0f32.min(max_w));
             }
-            ui.set_max_width(wide.unwrap_or(if d.kind == DialogKind::NewDocument {
+            // The desktop sheet is 800 pt wide; on a phone that is wider than the screen, which
+            // pushed the details column and the Create footer past the right edge.
+            let cap: f32 = if d.kind == DialogKind::NewDocument {
                 800.0
             } else if about_tabs {
                 700.0
@@ -263,7 +265,8 @@ pub fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
                 300.0
             } else {
                 440.0
-            }));
+            };
+            ui.set_max_width(cap.min(max_w));
             if web {
                 ui.set_max_width(available.x);
                 ui.set_min_size(available);
