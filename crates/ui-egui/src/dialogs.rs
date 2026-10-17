@@ -114,12 +114,12 @@ fn show_modal<T>(
     id: egui::Id,
     resizable: bool,
     interactive: bool,
+    phone: bool,
     contents: impl FnOnce(&mut egui::Ui) -> T,
 ) -> egui::ModalResponse<T> {
     // One policy for every dialog on a phone: it never grows past the screen, it always scrolls
     // inside it, and it does not offer a desktop resize grip. Without this each dialog had its own
     // width assumption and its footer could end up off the visible area.
-    let phone = crate::panels::phone(ctx);
     let room = crate::panels::screen(ctx) - egui::vec2(24.0, 80.0);
     modal.show(ctx, |ui| {
         // Disable the entire older modal, including its resize grip, not just its body.
@@ -210,6 +210,7 @@ pub fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
         if interactive && older_dialog_above(ctx, area.layer(), &app.ui.dialogs) {
             ctx.move_to_top(area.layer());
         }
+        let phone = app.phone;
         let color_picker = crate::color_picker_ui::owns(&fields);
         let mut modal = egui::Modal::new(id).area(area).backdrop_color(egui::Color32::TRANSPARENT);
         if color_picker {
@@ -220,7 +221,7 @@ pub fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
         // Photoshop doesn't dim the window behind dialogs: previews must be judged at true contrast.
         let web = fields.contains_key("__web");
         let web_popup_open = web && egui::Popup::is_any_open(ctx);
-        let modal = show_modal(modal, ctx, id, resizable_dialog(&fields), interactive, |ui| {
+        let modal = show_modal(modal, ctx, id, resizable_dialog(&fields), interactive, phone, |ui| {
             sizing = ui.is_sizing_pass();
             let available = ui.available_size();
             // A dialog of a few short fields (`__compact`, Fit Image) is narrower (#4673): the title
@@ -229,7 +230,7 @@ pub fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
             // The curve editor caps its graph allocation at 300 points (#5113).
             let curves = fields.get("__adjust").and_then(Value::as_str) == Some("curves");
             // A phone cannot hold the 800 pt two-column sheet: it stacks and scrolls instead.
-            let phone = crate::panels::phone(ui.ctx());
+            let phone = app.phone;
             // Never ask for more width than the phone has.
             let max_w = if phone { (crate::panels::screen(ui.ctx()).x - 24.0).max(280.0) } else { f32::INFINITY };
             if !compact {

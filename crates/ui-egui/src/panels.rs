@@ -970,7 +970,7 @@ pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     // A phone-width window has no room for one long row of options: under 700 points they wrap
     // into as many rows as they need, and the bar shows two of them while the rest scrolls. Wider
     // windows keep the single row, scrolled sideways.
-    let compact = ui.max_rect().width() < 700.0 || ui.max_rect().height() < 480.0;
+    let compact = app.phone;
     let height = if compact {
         options_bar_height(t.pro, narrow) * 2.0 - 6.0
     } else {
@@ -1748,7 +1748,7 @@ pub fn right_dock(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     let p = app.ui.panels.clone();
     // A phone shows the dock over the canvas, never as a column beside it.
-    if phone(ui.ctx()) {
+    if app.phone {
         if !customized {
             phone_dock(app, ui, &p, &t);
         }

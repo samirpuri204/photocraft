@@ -532,7 +532,7 @@ pub fn body(app: &mut crate::PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<Strin
         })
         .collect();
     let chosen = get_s(f, "__preset", "");
-    let stack = crate::panels::phone(ui.ctx());
+    let stack = app.phone;
     let mut columns = |ui: &mut egui::Ui| {
     ui.horizontal_top(|ui| {
         // Left: preset grid.
@@ -545,9 +545,12 @@ pub fn body(app: &mut crate::PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<Strin
             ui.label(RichText::new(crate::i18n::fmt(tl!("BLANK DOCUMENT PRESETS ({n})"), &[("n", &presets.len().to_string())])).size(11.0).color(t.text_faint));
             ui.add_space(6.0);
             let card = vec2(164.0, 112.0);
+            // The grid takes as many columns as the width allows: three on a desktop sheet, one or
+            // two on a phone, where a hardcoded three sliced the second card at the edge.
+            let per_row = (((ui.available_width() + 8.0) / (card.x + 8.0)).floor() as usize).clamp(1, 4);
             // Up to 20 recent documents: scroll past three rows rather than grow the dialog.
             egui::ScrollArea::vertical().id_salt("new-document-presets").max_height(3.0 * (card.y + 8.0)).show(ui, |ui| {
-                for row in presets.chunks(3) {
+                for row in presets.chunks(per_row) {
                     ui.horizontal(|ui| {
                         ui.spacing_mut().item_spacing.x = 8.0;
                         for c in row {

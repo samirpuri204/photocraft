@@ -548,6 +548,9 @@ type InfoSampleKey = (i32, i32, u64, u32);
 pub struct PhotocraftApp {
     pub session: Session,
     pub ui: UiState,
+    /// This frame's window is a phone: narrow, or a phone held sideways. Set once per frame before
+    /// any panel draws and read by every layout decision, so all of them agree. Never saved.
+    pub phone: bool,
     pub services: Services,
     /// Canvas caches per (document, display): CPU textures hold monitor values; the GPU
     /// canvas state is shared (`canvas::GPU_OUTPUT`).
@@ -834,6 +837,7 @@ impl PhotocraftApp {
         let mut app = Self {
             session,
             ui: UiState::default(),
+            phone: false,
             services,
             canvases: HashMap::new(),
             navigator_textures: HashMap::new(),
@@ -1974,7 +1978,8 @@ impl eframe::App for PhotocraftApp {
         // sideways, where a desktop's chrome does not fit vertically either.
         let size = ui.max_rect().size();
         panels::set_screen(&ctx, size);
-        panels::set_phone(&ctx, size.x < 700.0 || size.y < 480.0);
+        self.phone = size.x < 700.0 || size.y < 480.0;
+        panels::set_phone(&ctx, self.phone);
         i18n::set_current(i18n::Lang::from_pref(&self.session.prefs().interface.language));
         // Fonts registered via set_fonts only take effect next frame; named families would panic now.
         if !self.fonts_ready {
