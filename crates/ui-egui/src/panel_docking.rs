@@ -447,7 +447,7 @@ pub(crate) fn show(app: &mut PhotocraftApp, ui: &mut egui::Ui) -> bool {
     let output = if layout.root.is_some() {
         // Keep the dock from eating the canvas on narrow viewports. Only the
         // panel's own width range changes; nothing inside it is repositioned.
-        let screen_w = ui.ctx().screen_rect().width();
+        let screen_w = ui.ctx().input(|i| i.screen_rect().width());
         let dock_default = if screen_w < 700.0 {
             (screen_w * 0.5).clamp(180.0, 260.0)
         } else if t.pro {
