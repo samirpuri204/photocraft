@@ -121,6 +121,8 @@ fn show_modal<T>(
     // inside it, and it does not offer a desktop resize grip. Without this each dialog had its own
     // width assumption and its footer could end up off the visible area.
     let room = crate::panels::screen(ctx) - egui::vec2(24.0, 80.0);
+    // The frame's phone flag can lag the first frame after a resize; the screen size cannot.
+    let phone = phone || room.x < 700.0;
     modal.show(ctx, |ui| {
         // Disable the entire older modal, including its resize grip, not just its body.
         if !interactive {
@@ -230,7 +232,7 @@ pub fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
             // The curve editor caps its graph allocation at 300 points (#5113).
             let curves = fields.get("__adjust").and_then(Value::as_str) == Some("curves");
             // A phone cannot hold the 800 pt two-column sheet: it stacks and scrolls instead.
-            let phone = app.phone;
+            let phone = app.phone || crate::panels::screen(ui.ctx()).x < 700.0;
             // Never ask for more width than the phone has.
             let max_w = if phone { (crate::panels::screen(ui.ctx()).x - 24.0).max(280.0) } else { f32::INFINITY };
             if !compact {

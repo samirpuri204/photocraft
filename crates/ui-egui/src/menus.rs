@@ -1247,7 +1247,10 @@ pub fn menu_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) -> f32 {
         };
         // A phone cannot show ten menu titles at once; the bar scrolls sideways there, so Window
         // and Help stay reachable instead of being cut off at the edge.
-        if crate::panels::phone(ui.ctx()) {
+        // Measured here, not from the frame flag: the bar is drawn before the flag settles.
+        let narrow = ui.available_width() < 700.0;
+        if narrow {
+            ui.spacing_mut().button_padding.x = 5.0;
             egui::ScrollArea::horizontal()
                 .id_salt("pixelune-menu-bar")
                 .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysHidden)

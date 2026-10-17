@@ -532,7 +532,8 @@ pub fn body(app: &mut crate::PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<Strin
         })
         .collect();
     let chosen = get_s(f, "__preset", "");
-    let stack = app.phone;
+    // Stack whenever the sheet is narrow, whatever the frame flag says.
+    let stack = app.phone || ui.available_width() < 560.0;
     let mut columns = |ui: &mut egui::Ui| {
     ui.horizontal_top(|ui| {
         // Left: preset grid.
