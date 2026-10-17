@@ -6653,58 +6653,63 @@ mod sampler_readout_tests {
     }
 }
 
-/// The phone's tool bar: a strip along the bottom edge with the tools a finger reaches for first,
-/// and a sheet holding every tool in `Tool::ALL`, so nothing is lost when the desktop column is
-/// hidden to give the canvas its width.
+/// The phone's tool bar: seven fixed cells along the bottom edge — six tools a finger reaches
+/// for first, plus a sheet holding every tool in `Tool::ALL`, so nothing is lost when the desktop
+/// column is hidden to give the canvas its width.
+const PHONE_STRIP: [(Tool, &str); 6] = [
+    (Tool::Move, "Select"),
+    (Tool::Brush, "Brush"),
+    (Tool::Eraser, "Eraser"),
+    (Tool::Type, "Text"),
+    (Tool::PaintBucket, "Fill"),
+    (Tool::Zoom, "Zoom"),
+];
+
 pub fn mobile_tools(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     use egui::{Align2, FontId, Sense, pos2, vec2};
     let t = Tokens::get(ui.ctx());
-    let strip = [
-        Tool::Move, Tool::RectMarquee, Tool::Lasso, Tool::Crop, Tool::Brush,
-        Tool::Eraser, Tool::Type, Tool::Gradient, Tool::Zoom, Tool::Hand,
-    ];
+    // The sheet must cover the window, not the strip: take the size before the panel shrinks it.
+    let screen = ui.max_rect();
+    let cell = ((screen.width() - 10.0) / 7.0).clamp(38.0, 60.0);
     egui::Panel::bottom("phone-tool-bar")
-        .exact_size(54.0)
-        .frame(egui::Frame::NONE.fill(t.chrome))
+        .exact_size(56.0)
+        .frame(egui::Frame::NONE.fill(t.chrome).inner_margin(egui::Margin::symmetric(4, 2)))
         .show(ui, |ui| {
-            egui::ScrollArea::horizontal().id_salt("phone-tool-scroll").auto_shrink([false, false]).show(ui, |ui| {
-                ui.horizontal(|ui| {
-                    ui.spacing_mut().item_spacing.x = 0.0;
-                    for tool in strip {
-                        phone_tool_button(app, ui, &t, tool, 50.0);
-                    }
-                    let (rect, resp) = ui.allocate_exact_size(vec2(52.0, 50.0), Sense::click());
-                    let on = app.phone_tools_open;
-                    if on {
-                        ui.painter().rect_filled(rect, 8.0, t.accent.gamma_multiply(0.18));
-                    }
-                    icons::paint(ui, egui::Rect::from_center_size(rect.center() - vec2(0.0, 6.0), vec2(22.0, 22.0)), "ellipsis", 22.0, if on { t.accent } else { t.text });
-                    ui.painter().text(pos2(rect.center().x, rect.bottom() - 8.0), Align2::CENTER_CENTER, tl!("More"), FontId::proportional(9.5), if on { t.accent } else { t.text_faint });
-                    if resp.clicked() {
-                        app.phone_tools_open = !app.phone_tools_open;
-                    }
-                });
+            ui.horizontal(|ui| {
+                ui.spacing_mut().item_spacing.x = 0.0;
+                for (tool, short) in PHONE_STRIP {
+                    phone_tool_button(app, ui, &t, tool, cell, short);
+                }
+                let (rect, resp) = ui.allocate_exact_size(vec2(cell, 52.0), Sense::click());
+                let on = app.phone_tools_open;
+                if on {
+                    ui.painter().rect_filled(rect, 8.0, t.accent.gamma_multiply(0.18));
+                }
+                icons::paint(ui, egui::Rect::from_center_size(rect.center() - vec2(0.0, 7.0), vec2(21.0, 21.0)), "ellipsis", 21.0, if on { t.accent } else { t.text });
+                ui.painter().with_clip_rect(rect.shrink(1.0)).text(pos2(rect.center().x, rect.bottom() - 9.0), Align2::CENTER_CENTER, tl!("More"), FontId::proportional(9.0), if on { t.accent } else { t.text_faint });
+                if resp.clicked() {
+                    app.phone_tools_open = !app.phone_tools_open;
+                }
             });
         });
     if !app.phone_tools_open {
         return;
     }
-    let area = ui.max_rect();
     egui::Area::new(egui::Id::new("phone-tools-sheet"))
         .order(egui::Order::Foreground)
-        .fixed_pos(pos2(area.left() + 6.0, area.top() + 6.0))
+        .fixed_pos(pos2(screen.left() + 6.0, screen.top() + 6.0))
         .show(ui.ctx(), |ui| {
-            ui.set_width((area.width() - 12.0).max(240.0));
-            ui.set_height((area.height() - 12.0).max(200.0));
+            ui.set_width((screen.width() - 12.0).max(240.0));
+            ui.set_height((screen.height() - 80.0).max(220.0));
             egui::Frame::NONE
                 .fill(t.card)
                 .stroke(Stroke::new(1.0, t.card_border))
                 .inner_margin(egui::Margin::same(10))
                 .show(ui, |ui| {
                     ui.horizontal(|ui| {
-                        ui.label(egui::RichText::new(tl!("Tools")).size(15.0).color(t.text));
+                        ui.label(egui::RichText::new(tl!("All tools")).size(15.0).color(t.text));
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            if icons::button(ui, "x", 26.0, false, tl!("Close")).clicked() {
+                            if icons::button(ui, "x", 30.0, false, tl!("Close")).clicked() {
                                 app.phone_tools_open = false;
                             }
                         });
@@ -6712,9 +6717,10 @@ pub fn mobile_tools(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
                     ui.add_space(6.0);
                     egui::ScrollArea::vertical().id_salt("phone-tools-list").auto_shrink([false, false]).show(ui, |ui| {
                         ui.horizontal_wrapped(|ui| {
-                            ui.spacing_mut().item_spacing = vec2(4.0, 6.0);
+                            ui.spacing_mut().item_spacing = vec2(2.0, 6.0);
                             for tool in Tool::ALL {
-                                phone_tool_button(app, ui, &t, tool, 62.0);
+                                let label = tool.label();
+                                phone_tool_button(app, ui, &t, tool, 60.0, label);
                             }
                         });
                     });
@@ -6722,21 +6728,22 @@ pub fn mobile_tools(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
         });
 }
 
-fn phone_tool_button(app: &mut PhotocraftApp, ui: &mut egui::Ui, t: &Tokens, tool: Tool, w: f32) {
+fn phone_tool_button(app: &mut PhotocraftApp, ui: &mut egui::Ui, t: &Tokens, tool: Tool, w: f32, label: &str) {
     use egui::{Align2, FontId, Sense, pos2, vec2};
-    let (rect, resp) = ui.allocate_exact_size(vec2(w, 50.0), Sense::click());
+    let (rect, resp) = ui.allocate_exact_size(vec2(w, 52.0), Sense::click());
     let on = app.ui.tool == tool;
     if on {
         ui.painter().rect_filled(rect, 8.0, t.accent.gamma_multiply(0.20));
     }
     let color = if on { t.accent } else { t.text };
-    let icon = egui::Rect::from_center_size(rect.center() - vec2(0.0, 6.0), vec2(21.0, 21.0));
+    let icon = egui::Rect::from_center_size(rect.center() - vec2(0.0, 7.0), vec2(21.0, 21.0));
     icons::paint(ui, icon, icons::tool_icon(tool), 21.0, color);
-    ui.painter().text(
-        pos2(rect.center().x, rect.bottom() - 8.0),
+    // Labels are drawn into a fixed cell: clip them, or long names paint over their neighbours.
+    ui.painter().with_clip_rect(rect.shrink(1.0)).text(
+        pos2(rect.center().x, rect.bottom() - 9.0),
         Align2::CENTER_CENTER,
-        tool.label(),
-        FontId::proportional(9.5),
+        label,
+        FontId::proportional(9.0),
         if on { t.accent } else { t.text_faint },
     );
     if resp.clicked() {
