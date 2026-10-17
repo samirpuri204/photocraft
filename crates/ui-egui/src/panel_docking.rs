@@ -543,7 +543,7 @@ pub(crate) fn show(app: &mut PhotocraftApp, ui: &mut egui::Ui) -> bool {
         let area = ui.max_rect();
         let mut clicked = false;
         egui::Area::new(egui::Id::new("pixelune-dock-toggle"))
-            .order(egui::Order::Foreground)
+            .order(egui::Order::Tooltip)
             .fixed_pos(egui::pos2(area.right() - 50.0, area.bottom() - 92.0))
             .show(ui.ctx(), |ui| {
                 if crate::icons::button(ui, "layers", 36.0, overlay_open, tl!("Panels")).clicked() {

@@ -1828,12 +1828,19 @@ fn phone_dock(app: &mut PhotocraftApp, ui: &mut egui::Ui, p: &crate::state::Pane
                 });
             });
     }
+    // Above the overlay it opens (Tooltip order outranks Foreground however the layers were
+    // created), and drawn as a filled tile so it reads as a button on a dark canvas.
     let mut clicked = false;
     egui::Area::new(egui::Id::new("pixelune-dock-toggle"))
-        .order(egui::Order::Foreground)
-        .fixed_pos(pos2(area.right() - 50.0, area.bottom() - 92.0))
+        .order(egui::Order::Tooltip)
+        .fixed_pos(pos2(area.right() - 52.0, area.bottom() - 96.0))
         .show(ui.ctx(), |ui| {
-            if icons::button(ui, "layers", 36.0, open, tl!("Panels")).clicked() {
+            let (rect, resp) = ui.allocate_exact_size(vec2(40.0, 40.0), Sense::click());
+            let p = ui.painter();
+            p.rect_filled(rect, 10.0, t.card);
+            p.rect_stroke(rect, 10.0, Stroke::new(1.0, t.card_border), StrokeKind::Inside);
+            icons::paint(ui, rect.shrink(9.0), "layers", 22.0, if open { t.accent } else { t.text });
+            if resp.clicked() {
                 clicked = true;
             }
         });
