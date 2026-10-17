@@ -1147,6 +1147,7 @@ pub fn menu_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) -> f32 {
         v.widgets.inactive.bg_stroke = egui::Stroke::NONE;
         v.widgets.inactive.fg_stroke = egui::Stroke::new(1.0, t.text_dim);
         v.widgets.hovered.bg_stroke = egui::Stroke::NONE;
+        let mut bar = |ui: &mut egui::Ui| {
         egui::MenuBar::new().ui(ui, |ui| {
             // egui lays the bar out left to right; a right-to-left UI starts it at the right.
             let mut mirrored = rtl.then(|| ui.new_child(egui::UiBuilder::new().layout(crate::direction::row())));
@@ -1239,6 +1240,17 @@ pub fn menu_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) -> f32 {
             }
             keys.keys(ui.ctx(), &tops, &mnemonics, &mut nav, &mut clicked);
         });
+        };
+        // A phone cannot show ten menu titles at once; the bar scrolls sideways there, so Window
+        // and Help stay reachable instead of being cut off at the edge.
+        if crate::panels::phone(ui.ctx()) {
+            egui::ScrollArea::horizontal()
+                .id_salt("pixelune-menu-bar")
+                .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysHidden)
+                .show(ui, &mut bar);
+        } else {
+            bar(ui);
+        }
     });
     keys.store(ui.ctx());
     nav.store(ui.ctx());

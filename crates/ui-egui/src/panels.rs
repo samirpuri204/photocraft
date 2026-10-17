@@ -1541,6 +1541,9 @@ pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
             if compact {
                 egui::ScrollArea::vertical().id_salt("tool-options-compact").auto_shrink([false, false]).show(ui, |ui| {
                     ui.spacing_mut().item_spacing.y = 4.0;
+                    // A fingertip needs ~44 px; keep the compact look but grow the hit height.
+                    ui.spacing_mut().interact_size.y = 30.0;
+                    ui.spacing_mut().button_padding = vec2(6.0, 5.0);
                     ui.horizontal_wrapped(options);
                 });
             } else {
@@ -1833,13 +1836,13 @@ fn phone_dock(app: &mut PhotocraftApp, ui: &mut egui::Ui, p: &crate::state::Pane
     let mut clicked = false;
     egui::Area::new(egui::Id::new("pixelune-dock-toggle"))
         .order(egui::Order::Tooltip)
-        .fixed_pos(pos2(area.right() - 52.0, area.bottom() - 96.0))
+        .fixed_pos(pos2(area.right() - 56.0, area.bottom() - 100.0))
         .show(ui.ctx(), |ui| {
-            let (rect, resp) = ui.allocate_exact_size(vec2(40.0, 40.0), Sense::click());
+            let (rect, resp) = ui.allocate_exact_size(vec2(44.0, 44.0), Sense::click());
             let p = ui.painter();
             p.rect_filled(rect, 10.0, t.card);
             p.rect_stroke(rect, 10.0, Stroke::new(1.0, t.card_border), StrokeKind::Inside);
-            icons::paint(ui, rect.shrink(9.0), "layers", 22.0, if open { t.accent } else { t.text });
+            icons::paint(ui, rect.shrink(10.0), "layers", 24.0, if open { t.accent } else { t.text });
             if resp.clicked() {
                 clicked = true;
             }
