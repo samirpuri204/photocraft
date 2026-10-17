@@ -923,6 +923,16 @@ pub fn set_phone(ctx: &egui::Context, phone: bool) {
     ctx.data_mut(|data| data.insert_temp(egui::Id::new("pixelune-phone-layout"), phone));
 }
 
+/// The window size in layout units, recorded beside the phone flag.
+pub fn set_screen(ctx: &egui::Context, size: egui::Vec2) {
+    ctx.data_mut(|data| data.insert_temp(egui::Id::new("pixelune-screen-size"), size));
+}
+
+/// The window size in layout units.
+pub fn screen(ctx: &egui::Context) -> egui::Vec2 {
+    ctx.data(|data| data.get_temp::<egui::Vec2>(egui::Id::new("pixelune-screen-size"))).unwrap_or(egui::vec2(1440.0, 900.0))
+}
+
 /// Is this frame a phone layout?
 pub fn phone(ctx: &egui::Context) -> bool {
     ctx.data(|data| data.get_temp::<bool>(egui::Id::new("pixelune-phone-layout"))).unwrap_or(false)

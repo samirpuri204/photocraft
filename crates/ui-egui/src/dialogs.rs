@@ -215,14 +215,18 @@ pub fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
             let compact = d.fields.contains_key("__compact");
             // The curve editor caps its graph allocation at 300 points (#5113).
             let curves = fields.get("__adjust").and_then(Value::as_str) == Some("curves");
+            // A phone cannot hold the 800 pt two-column sheet: it stacks and scrolls instead.
+            let phone = crate::panels::phone(ui.ctx());
+            // Never ask for more width than the phone has.
+            let max_w = if phone { (crate::panels::screen(ui.ctx()).x - 24.0).max(280.0) } else { f32::INFINITY };
             if !compact {
-                ui.set_min_width(if curves { 300.0 } else { 380.0 });
+                ui.set_min_width((if curves { 300.0 } else { 380.0 }).min(max_w));
             }
             let wide = crate::prefs_ui::width(&d.fields, (ctx.content_rect().width() - 48.0).max(380.0));
             if let Some(w) = wide {
-                ui.set_min_width(w.min(460.0));
+                ui.set_min_width(w.min(460.0).min(max_w));
             }
-            if d.kind == DialogKind::NewDocument {
+            if d.kind == DialogKind::NewDocument && !phone {
                 ui.set_min_width(800.0);
             }
             // The About window: room for the contributor table, the same width on every tab.
@@ -278,7 +282,20 @@ pub fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
             crate::field_tab::begin(ui.ctx());
             match d.kind {
                 DialogKind::NewDocument => {
-                    if crate::new_doc_ui::body(app, ui, &mut fields) {
+                    // On a phone the sheet is taller than the screen: scroll it, so the footer
+                    // with Create stays reachable.
+                    let created = if phone {
+                        let room = (crate::panels::screen(ui.ctx()).y - 220.0).max(200.0);
+                        egui::ScrollArea::vertical()
+                            .id_salt("new-document-phone")
+                            .max_height(room)
+                            .auto_shrink([false, false])
+                            .show(ui, |ui| crate::new_doc_ui::body(app, ui, &mut fields))
+                            .inner
+                    } else {
+                        crate::new_doc_ui::body(app, ui, &mut fields)
+                    };
+                    if created {
                         outcome = Some(true);
                     }
                 }

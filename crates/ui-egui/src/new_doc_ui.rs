@@ -499,8 +499,9 @@ pub fn body(app: &mut crate::PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<Strin
     let cat = get_s(f, "__category", "Recent");
     let mut create = false;
     // Category tabs.
-    ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 18.0;
+    // Ten category names do not fit a phone's width; let them wrap rather than truncate.
+    ui.horizontal_wrapped(|ui| {
+        ui.spacing_mut().item_spacing.x = if crate::panels::phone(ui.ctx()) { 10.0 } else { 18.0 };
         for name in CATEGORIES.iter().map(|c| c.0).chain(["Saved"]) {
             let on = cat == name;
             let label = if name == "Saved" { tl!("Saved") } else { tl!(name) };
@@ -531,10 +532,12 @@ pub fn body(app: &mut crate::PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<Strin
         })
         .collect();
     let chosen = get_s(f, "__preset", "");
+    let stack = crate::panels::phone(ui.ctx());
+    let mut columns = |ui: &mut egui::Ui| {
     ui.horizontal_top(|ui| {
         // Left: preset grid.
         ui.vertical(|ui| {
-            ui.set_width(520.0);
+            ui.set_width(if stack { ui.available_width() } else { 520.0 });
             if cat == "Saved" {
                 create |= saved_presets(app, ui, f);
                 return;
@@ -605,13 +608,13 @@ pub fn body(app: &mut crate::PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<Strin
         ui.add_space(10.0);
         // Right: Preset Details.
         ui.vertical(|ui| {
-            ui.set_width(260.0);
+            ui.set_width(if stack { ui.available_width() } else { 260.0 });
             ui.label(RichText::new(tl!("PRESET DETAILS")).size(11.0).color(t.text_faint));
             ui.add_space(4.0);
             // Keep the canonical English default in state; only the TextEdit shows a translation.
             let raw = get_s(f, "name", "Untitled-1");
             let mut name = if raw == "Untitled-1" { tl!("Untitled-1").to_string() } else { raw };
-            let r = ui.add(egui::TextEdit::singleline(&mut name).desired_width(250.0).font(egui::FontId::proportional(15.0)));
+            let r = ui.add(egui::TextEdit::singleline(&mut name).desired_width(if stack { (ui.available_width() - 6.0).max(120.0) } else { 250.0 }).font(egui::FontId::proportional(15.0)));
             if r.changed() {
                 f.insert("name".into(), json!(name));
             }
@@ -761,6 +764,14 @@ pub fn body(app: &mut crate::PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<Strin
             save_preset(app, ui, f);
         });
     });
+    };
+    // A phone stacks the preset grid above the settings, so both fit the width and the Create
+    // footer stays inside the sheet.
+    if stack {
+        ui.horizontal_wrapped(&mut columns);
+    } else {
+        columns(ui);
+    }
     create
 }
 

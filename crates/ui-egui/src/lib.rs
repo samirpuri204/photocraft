@@ -1973,6 +1973,7 @@ impl eframe::App for PhotocraftApp {
         // One breakpoint for the whole frame, in the layout's own units: narrow, or a phone held
         // sideways, where a desktop's chrome does not fit vertically either.
         let size = ui.max_rect().size();
+        panels::set_screen(&ctx, size);
         panels::set_phone(&ctx, size.x < 700.0 || size.y < 480.0);
         i18n::set_current(i18n::Lang::from_pref(&self.session.prefs().interface.language));
         // Fonts registered via set_fonts only take effect next frame; named families would panic now.
