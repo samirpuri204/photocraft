@@ -220,7 +220,8 @@ pub fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
             // Never ask for more width than the phone has.
             let max_w = if phone { (crate::panels::screen(ui.ctx()).x - 24.0).max(280.0) } else { f32::INFINITY };
             if !compact {
-                ui.set_min_width((if curves { 300.0 } else { 380.0 }).min(max_w));
+                let base: f32 = if curves { 300.0 } else { 380.0 };
+                ui.set_min_width(base.min(max_w));
             }
             let wide = crate::prefs_ui::width(&d.fields, (ctx.content_rect().width() - 48.0).max(380.0));
             if let Some(w) = wide {
