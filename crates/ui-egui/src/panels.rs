@@ -916,13 +916,25 @@ fn options_bar_height(pro: bool, narrow: bool) -> f32 {
     }
 }
 
+/// Phone layouts: the editor is drawn at a width where a desktop's chrome does not fit. The
+/// flag is set once per frame from the root ui, in the layout's own units, so every panel agrees
+/// on it (the web runner's `content_rect` is in device pixels and cannot be compared directly).
+pub fn set_phone(ctx: &egui::Context, phone: bool) {
+    ctx.data_mut(|data| data.insert_temp(egui::Id::new("pixelune-phone-layout"), phone));
+}
+
+/// Is this frame a phone layout?
+pub fn phone(ctx: &egui::Context) -> bool {
+    ctx.data(|data| data.get_temp::<bool>(egui::Id::new("pixelune-phone-layout"))).unwrap_or(false)
+}
+
 pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     let narrow = app.session.prefs().workspace.narrow_options_bar();
     // A phone-width window has no room for one long row of options: under 700 points they wrap
     // into as many rows as they need, and the bar shows two of them while the rest scrolls. Wider
     // windows keep the single row, scrolled sideways.
-    let compact = ui.max_rect().width() < 700.0;
+    let compact = phone(ui.ctx());
     let height = if compact {
         options_bar_height(t.pro, narrow) * 2.0 - 6.0
     } else {
@@ -1696,6 +1708,14 @@ pub fn right_dock(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     let customized = crate::panel_docking::show(app, ui);
     let t = Tokens::get(ui.ctx());
     let p = app.ui.panels.clone();
+    // A phone shows the dock over the canvas, never as a column beside it.
+    if phone(ui.ctx()) {
+        if !customized {
+            phone_dock(app, ui, &p, &t);
+        }
+        crate::dock::persist(app, ui.ctx());
+        return;
+    }
     if t.pro && !customized {
         dock_panels(app, ui, &p, &t);
     }
@@ -1755,6 +1775,19 @@ pub fn request_dock_width(ctx: &egui::Context, w: f32) {
 }
 
 fn dock_panels(app: &mut PhotocraftApp, ui: &mut egui::Ui, p: &crate::state::Panels, t: &Tokens) {
+    let margin = if t.pro { 2 } else { 8 };
+    let mut panel = crate::direction::end_panel("dock").resizable(true).default_size(if t.pro { 290.0 } else { 300.0 }).size_range(DOCK_WIDTH);
+    if let Some(w) = ui.ctx().data_mut(|d| d.remove_temp::<f32>(dock_width_id())) {
+        panel = panel.exact_size(w);
+    }
+    panel.frame(egui::Frame::NONE.fill(t.dock).inner_margin(egui::Margin::same(margin))).show(ui, |ui| {
+        dock_content(app, ui, p, t);
+    });
+}
+
+/// The dock's groups, without the column around them: the panel on a desktop, an overlay on a
+/// phone.
+fn dock_content(app: &mut PhotocraftApp, ui: &mut egui::Ui, p: &crate::state::Panels, t: &Tokens) {
     use crate::dock::Group;
     // Floating in Studio, Properties docks only in Pro (Photoshop).
     let shown: Vec<Group> = [
@@ -1772,15 +1805,41 @@ fn dock_panels(app: &mut PhotocraftApp, ui: &mut egui::Ui, p: &crate::state::Pan
     if shown.is_empty() {
         return;
     }
-    let margin = if t.pro { 2 } else { 8 };
-    let mut panel = crate::direction::end_panel("dock").resizable(true).default_size(if t.pro { 290.0 } else { 300.0 }).size_range(DOCK_WIDTH);
-    if let Some(w) = ui.ctx().data_mut(|d| d.remove_temp::<f32>(dock_width_id())) {
-        panel = panel.exact_size(w);
+    // Groups keep their heights whatever they show (#88): see `dock`.
+    crate::dock::show(app, ui, &shown, dock_body);
+}
+
+/// The dock on a phone: a panel over the canvas, opened from a button at the canvas corner, so
+/// the canvas keeps the full width until the panels are wanted.
+fn phone_dock(app: &mut PhotocraftApp, ui: &mut egui::Ui, p: &crate::state::Panels, t: &Tokens) {
+    let id = egui::Id::new("pixelune-dock-open");
+    let open = ui.ctx().data(|d| d.get_temp::<bool>(id)).unwrap_or(false);
+    let area = ui.max_rect();
+    if open {
+        let width = (area.width() * 0.92).clamp(240.0, 460.0);
+        egui::Area::new(egui::Id::new("pixelune-dock-overlay"))
+            .order(egui::Order::Foreground)
+            .fixed_pos(pos2(area.right() - width - 6.0, area.top() + 4.0))
+            .show(ui.ctx(), |ui| {
+                ui.set_width(width);
+                ui.set_height((area.height() - 12.0).max(160.0));
+                egui::Frame::NONE.fill(t.dock).stroke(Stroke::new(1.0, t.card_border)).show(ui, |ui| {
+                    dock_content(app, ui, p, t);
+                });
+            });
     }
-    panel.frame(egui::Frame::NONE.fill(t.dock).inner_margin(egui::Margin::same(margin))).show(ui, |ui| {
-        // Groups keep their heights whatever they show (#88): see `dock`.
-        crate::dock::show(app, ui, &shown, dock_body);
-    });
+    let mut clicked = false;
+    egui::Area::new(egui::Id::new("pixelune-dock-toggle"))
+        .order(egui::Order::Foreground)
+        .fixed_pos(pos2(area.right() - 50.0, area.bottom() - 92.0))
+        .show(ui.ctx(), |ui| {
+            if icons::button(ui, "layers", 36.0, open, tl!("Panels")).clicked() {
+                clicked = true;
+            }
+        });
+    if clicked {
+        ui.ctx().data_mut(|d| d.insert_temp(id, !open));
+    }
 }
 
 /// One dock group's tab content; `dock` bounds it and scrolls it when it's taller.

@@ -447,21 +447,21 @@ pub(crate) fn show(app: &mut PhotocraftApp, ui: &mut egui::Ui) -> bool {
     // A phone has no room for a dock column beside the canvas, so the dock becomes an overlay
     // that opens over it from a button at the canvas corner, and is folded away otherwise.
     let phone = ui.max_rect().width() < 700.0;
-    let overlay_id = egui::Id::new("pixelune-dock-overlay-open");
+    let overlay_id = egui::Id::new("pixelune-dock-open");
     let overlay_open = phone && ui.ctx().data(|data| data.get_temp::<bool>(overlay_id)).unwrap_or(false);
     let output = if layout.root.is_none() {
         Some(draw(ui))
     } else if phone {
         if overlay_open {
-            let screen = ui.ctx().content_rect();
-            let width = (screen.width() * 0.9).clamp(240.0, 460.0);
+            let area = ui.max_rect();
+            let width = (area.width() * 0.92).clamp(240.0, 460.0);
             Some(
                 egui::Area::new(egui::Id::new("shared-panel-dock-overlay"))
                     .order(egui::Order::Foreground)
-                    .fixed_pos(egui::pos2(screen.right() - width - 6.0, screen.top() + 6.0))
+                    .fixed_pos(egui::pos2(area.right() - width - 6.0, area.top() + 4.0))
                     .show(ui.ctx(), |ui| {
                         ui.set_width(width);
-                        ui.set_height((screen.height() - 12.0).max(160.0));
+                        ui.set_height((area.height() - 12.0).max(160.0));
                         egui::Frame::NONE
                             .fill(t.card)
                             .stroke(egui::Stroke::new(1.0, t.card_border))
@@ -540,11 +540,11 @@ pub(crate) fn show(app: &mut PhotocraftApp, ui: &mut egui::Ui) -> bool {
     }
     // The toggle is drawn after the dock so it stays on top of the open overlay and can close it.
     if phone {
-        let screen = ui.ctx().content_rect();
+        let area = ui.max_rect();
         let mut clicked = false;
-        egui::Area::new(egui::Id::new("pixelune-dock-overlay-toggle"))
+        egui::Area::new(egui::Id::new("pixelune-dock-toggle"))
             .order(egui::Order::Foreground)
-            .fixed_pos(egui::pos2(screen.right() - 52.0, screen.bottom() - 108.0))
+            .fixed_pos(egui::pos2(area.right() - 50.0, area.bottom() - 92.0))
             .show(ui.ctx(), |ui| {
                 if crate::icons::button(ui, "layers", 36.0, overlay_open, tl!("Panels")).clicked() {
                     clicked = true;

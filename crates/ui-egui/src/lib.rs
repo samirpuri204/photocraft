@@ -1970,6 +1970,8 @@ impl eframe::App for PhotocraftApp {
     fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
         let ctx = ui.ctx().clone();
         self.hover_layer = None;
+        // One breakpoint for the whole frame, in the layout's own units.
+        panels::set_phone(&ctx, ui.max_rect().width() < 700.0);
         i18n::set_current(i18n::Lang::from_pref(&self.session.prefs().interface.language));
         // Fonts registered via set_fonts only take effect next frame; named families would panic now.
         if !self.fonts_ready {

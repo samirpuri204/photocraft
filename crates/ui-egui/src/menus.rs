@@ -1175,9 +1175,16 @@ pub fn menu_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) -> f32 {
                 let config = egui::containers::menu::MenuConfig::new().close_behavior(bar.close_behavior).style(bar.style.clone());
                 let open = title_press(ui.ctx(), &title);
                 // The release ending the press that opened this menu is a click "outside" the
-                // popup: it must not close it again.
+                // popup: it must not close it again. A touch screen sends a synthetic mouse click
+                // after the tap, a frame or two later than the press, so a time window covers it
+                // too — otherwise the menu opens and shuts at once and reads as a dead button.
+                let now = ui.input(|i| i.time);
+                if matches!(&open, Some(egui::SetOpenCommand::Bool(true))) {
+                    ui.ctx().data_mut(|d| d.insert_temp(menu_open_at_id(), now));
+                }
+                let just_opened = ui.ctx().data(|d| d.get_temp::<f64>(menu_open_at_id())).is_some_and(|t| now - t < 0.35);
                 let opening = title.clicked() && ui.ctx().data(|d| d.get_temp::<bool>(press_gesture_id())).unwrap_or(false);
-                let close = if opening {
+                let close = if opening || just_opened {
                     egui::PopupCloseBehavior::IgnoreClicks
                 } else if *top == "Help" {
                     // Menus close on any click, inside them too; a click in Help's search field
@@ -1259,6 +1266,11 @@ fn press_gesture_id() -> egui::Id {
 /// A menu title's open/close command this frame, the press opens a closed menu (and
 /// starts a press-drag gesture: releasing on an item runs it) or closes an open one; the release
 /// never toggles, so the menu doesn't blink.
+/// When a top-level menu was last opened, so a touch's synthetic click cannot shut it again.
+fn menu_open_at_id() -> egui::Id {
+    egui::Id::new("photocraft-menu-opened-at")
+}
+
 fn title_press(ctx: &egui::Context, title: &egui::Response) -> Option<egui::SetOpenCommand> {
     // A press this frame on the title (still down, or a whole click within one frame).
     let pressed = ctx.input(|i| i.pointer.primary_pressed()) && (title.is_pointer_button_down_on() || title.clicked());
