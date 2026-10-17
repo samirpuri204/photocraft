@@ -1142,6 +1142,10 @@ pub fn menu_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) -> f32 {
     let top_mnemonics = crate::menu_keys::assign(&top_labels.iter().map(String::as_str).collect::<Vec<_>>(), &preferred);
     ui.scope(|ui| {
         ui.spacing_mut().item_spacing.x = 0.0;
+        if crate::panels::phone(ui.ctx()) {
+            // Ten menu titles on a 390 pt bar: tighter padding keeps Help on it.
+            ui.spacing_mut().button_padding = egui::vec2(4.0, 3.0);
+        }
         let v = &mut ui.style_mut().visuals;
         v.widgets.inactive.weak_bg_fill = egui::Color32::TRANSPARENT;
         v.widgets.inactive.bg_stroke = egui::Stroke::NONE;
@@ -1283,9 +1287,23 @@ fn menu_open_at_id() -> egui::Id {
     egui::Id::new("photocraft-menu-opened-at")
 }
 
+/// A finger landing on the title counts as the press: a touch tap reaches egui as a touch event
+/// first, and the mouse press that follows can arrive in a later frame than the title's own
+/// response — so the mouse-only test below misses it and the menu never opens on a phone.
+fn touch_started_on(ctx: &egui::Context, rect: egui::Rect) -> bool {
+    ctx.input(|i| {
+        i.events.iter().any(|e| match e {
+            egui::Event::Touch { phase, pos, .. } => *phase == egui::TouchPhase::Start && rect.contains(*pos),
+            _ => false,
+        })
+    })
+}
+
 fn title_press(ctx: &egui::Context, title: &egui::Response) -> Option<egui::SetOpenCommand> {
-    // A press this frame on the title (still down, or a whole click within one frame).
-    let pressed = ctx.input(|i| i.pointer.primary_pressed()) && (title.is_pointer_button_down_on() || title.clicked());
+    // A press this frame on the title (still down, or a whole click within one frame), or a
+    // finger touching it.
+    let pressed = (ctx.input(|i| i.pointer.primary_pressed()) && (title.is_pointer_button_down_on() || title.clicked()))
+        || touch_started_on(ctx, title.rect);
     if !pressed {
         return None;
     }
