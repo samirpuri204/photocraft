@@ -535,7 +535,15 @@ pub fn body(app: &mut crate::PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<Strin
     // Stack whenever the sheet is narrow, whatever the frame flag says.
     let stack = app.phone || ui.available_width() < 560.0;
     let mut columns = |ui: &mut egui::Ui| {
-    ui.horizontal_top(|ui| {
+    // One container, two directions: a phone stacks the details under the presets, a desktop puts
+    // them side by side. Wrapping a horizontal row is not enough — a full-width column allocates
+    // its whole width, so the row never breaks and the details and footer end up off-screen.
+    let layout = if stack {
+        egui::Layout::top_down(egui::Align::Min)
+    } else {
+        egui::Layout::left_to_right(egui::Align::Min)
+    };
+    ui.allocate_ui_with_layout(ui.available_size(), layout, |ui| {
         // Left: preset grid.
         ui.vertical(|ui| {
             ui.set_width(if stack { ui.available_width() } else { 520.0 });
@@ -771,11 +779,7 @@ pub fn body(app: &mut crate::PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<Strin
     };
     // A phone stacks the preset grid above the settings, so both fit the width and the Create
     // footer stays inside the sheet.
-    if stack {
-        ui.horizontal_wrapped(&mut columns);
-    } else {
-        columns(ui);
-    }
+    columns(ui);
     create
 }
 
